@@ -6,7 +6,7 @@ import { Stats } from './components/Stats';
 import { ProfileSubmission } from './components/ProfileSubmission';
 import { getTodayProfile, getGameState, saveGameState, checkGuesses, generateShareText } from './utils/gameLogic';
 import { GraduationCap, UserPlus } from 'lucide-react';
-
+import { Analytics } from "@vercel/analytics/react"
 function App() {
   const [profile] = useState(getTodayProfile());
   const [gameState, setGameState] = useState(getGameState());
