@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { StudentProfile } from './components/StudentProfile';
+import { StudentProfile as StudentProfileComponent } from './components/StudentProfile';
 import { CollegeSelector } from './components/CollegeSelector';
 import { Results } from './components/Results';
 import { Stats } from './components/Stats';
 import { ProfileSubmission } from './components/ProfileSubmission';
+import { DiscussionForum } from './components/DiscussionForum';
+import { StudentCollegeResults } from './components/StudentCollegeResults';
 import { getTodayProfile, getGameState, saveGameState, checkGuesses, generateShareText } from './utils/gameLogic';
-import { GraduationCap, UserPlus } from 'lucide-react';
-import { Analytics } from "@vercel/analytics/react"
+import { GraduationCap, UserPlus, MessageCircle, RefreshCw } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/react";
+import { db } from './firebase/config'; // Import to ensure Firebase is initialized early
+
 function App() {
   const [profile] = useState(getTodayProfile());
   const [gameState, setGameState] = useState(getGameState());
@@ -14,12 +18,16 @@ function App() {
   const [showSubmissionForm, setShowSubmissionForm] = useState(false);
   const [animateResults, setAnimateResults] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDiscussion, setShowDiscussion] = useState(false);
+  const [refreshDiscussion, setRefreshDiscussion] = useState(0); // For manual refresh
+  const [firebaseStatus, setFirebaseStatus] = useState<'loading' | 'connected' | 'error'>('loading');
   const maxSelections = 3;
 
   const allColleges = [
     'MIT', 'Stanford', 'Harvard', 'CalTech', 'UC Berkeley',
     'Princeton', 'Yale', 'Columbia', 'UPenn', 'Cornell'
   ];
+
 
   // When game is completed, trigger the animation
   useEffect(() => {
@@ -73,26 +81,53 @@ function App() {
     alert('Results copied to clipboard!');
   };
 
+  const toggleDiscussion = () => {
+    setShowDiscussion(!showDiscussion);
+  };
+
+  const handleRefreshDiscussion = () => {
+    setRefreshDiscussion(prev => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <header className="max-w-2xl mx-auto mb-8 text-center">
         <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
           <GraduationCap className="w-8 h-8" />
-          College Admissions Game
+          ChanceUs
         </h1>
         <p className="text-gray-600">
           Can you guess which colleges accepted this student?
         </p>
-        <button
-          onClick={() => setShowSubmissionForm(true)}
-          className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800 gap-1 font-medium"
-        >
-          <UserPlus className="w-4 h-4" />
-          Submit Your Profile
-        </button>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <button
+            onClick={() => setShowSubmissionForm(true)}
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 gap-1 font-medium"
+          >
+            <UserPlus className="w-4 h-4" />
+            Submit Your Profile
+          </button>
+          <button
+            onClick={toggleDiscussion}
+            className="inline-flex items-center text-blue-600 hover:text-blue-800 gap-1 font-medium"
+          >
+            <MessageCircle className="w-4 h-4" />
+            {showDiscussion ? 'Hide Discussion' : 'Join Discussion'}
+          </button>
+          {showDiscussion && (
+            <button
+              onClick={handleRefreshDiscussion}
+              className="inline-flex items-center text-blue-600 hover:text-blue-800 gap-1 font-medium"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh Forum
+            </button>
+          )}
+        </div>
       </header>
 
-      <StudentProfile profile={profile} />
+      {/* Only show the student profile prior to game completion */}
+      {!gameState.completed && <StudentProfileComponent profile={profile} />}
 
       {!gameState.completed ? (
         <>
@@ -127,12 +162,28 @@ function App() {
             animateResults={animateResults}
           />
           <Stats stats={gameState} />
+          
+          {/* Show the complete college results */}
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold text-center mb-4">Full Student Results</h2>
+            <StudentProfileComponent profile={profile} />
+            <StudentCollegeResults profile={profile} />
+          </div>
         </>
+      )}
+
+      {showDiscussion && (
+        <DiscussionForum 
+          key={`discussion-${refreshDiscussion}`} 
+          profileId={profile.id} 
+        />
       )}
 
       {showSubmissionForm && (
         <ProfileSubmission onClose={() => setShowSubmissionForm(false)} />
       )}
+      
+      <Analytics />
     </div>
   );
 }

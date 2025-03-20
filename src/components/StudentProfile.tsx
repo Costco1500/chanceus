@@ -1,6 +1,6 @@
 import React from 'react';
 import { StudentProfile as StudentProfileType } from '../types';
-import { GraduationCap, Award, BookOpen, Users, Star } from 'lucide-react';
+import { GraduationCap, Award, BookOpen, Users, Star, Trophy } from 'lucide-react';
 
 interface Props {
   profile: StudentProfileType;
@@ -37,6 +37,38 @@ export const StudentProfile: React.FC<Props> = ({ profile }) => {
                 <p className="text-gray-600">ACT</p>
                 <p className="font-semibold">{profile.academicStats.actScore}</p>
               </div>
+            )}
+          </div>
+        </div>
+
+        <div className="border-b pb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Trophy className="w-6 h-6" />
+            Awards
+          </h2>
+          <div className="space-y-3 mt-3">
+            {profile.awards && profile.awards.length > 0 ? (
+              profile.awards.map((award, index) => (
+                <div key={index} className="bg-gray-50 p-3 rounded">
+                  <div className="flex justify-between">
+                    <p className="font-semibold">{award.name}</p>
+                    <span className={`text-sm px-2 py-1 rounded ${
+                      award.level === 'National' ? 'bg-blue-100 text-blue-800' : 
+                      award.level === 'International' ? 'bg-purple-100 text-purple-800' : 
+                      award.level === 'State' ? 'bg-green-100 text-green-800' : 
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {award.level}
+                    </span>
+                  </div>
+                  {award.description && (
+                    <p className="text-sm text-gray-600 mt-1">{award.description}</p>
+                  )}
+                  <p className="text-sm text-gray-500 mt-1">{award.year}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 italic">No awards listed</p>
             )}
           </div>
         </div>

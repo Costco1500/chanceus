@@ -5,6 +5,13 @@ export type Activity = {
   yearsInvolved: number;
 };
 
+export type Award = {
+  name: string;
+  level: 'Regional' | 'State' | 'National' | 'International';
+  year: number;
+  description?: string;
+};
+
 export type StudentProfile = {
   id: string;
   academicStats: {
@@ -14,6 +21,7 @@ export type StudentProfile = {
     actScore?: number;
   };
   activities: Activity[];
+  awards: Award[];
   essays: {
     topic: string;
     description: string;
