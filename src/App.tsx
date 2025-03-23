@@ -174,8 +174,8 @@ function App() {
 
       {showDiscussion && (
         <DiscussionForum 
-          key={`discussion-${refreshDiscussion}`} 
-          profileId={profile.id} 
+          profileId={profile.id}
+          refreshTrigger={refreshDiscussion} // Pass as a prop instead of key
         />
       )}
 

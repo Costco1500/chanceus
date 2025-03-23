@@ -80,5 +80,19 @@ export const collegeInsights: Record<string, CollegeInsight> = {
     medianStats: { sat: 1480, act: 34, gpa: 4.0 },
     uniqueTraits: 'Values both theoretical knowledge and practical application',
     lookingFor: ['Applied knowledge', 'Research experience', 'Interdisciplinary approach']
+  },
+  'UCLA': {
+    keyFactors: ['Academic excellence', 'Extracurricular achievement', 'Community involvement'],
+    acceptanceRate: '8.6%',
+    medianStats: { sat: 1405, act: 31, gpa: 3.9 },
+    uniqueTraits: 'Values creativity, diversity, and a well-rounded application',
+    lookingFor: ['Strong academics', 'Arts or athletic excellence', 'Leadership in community']
+  },
+  'NYU': {
+    keyFactors: ['Academic rigor', 'Artistic excellence', 'Global perspective'],
+    acceptanceRate: '12.8%',
+    medianStats: { sat: 1440, act: 32, gpa: 3.7 },
+    uniqueTraits: 'Values urban engagement and creative expression',
+    lookingFor: ['Artistic achievement', 'Global mindset', 'Independent thinking']
   }
 }; 

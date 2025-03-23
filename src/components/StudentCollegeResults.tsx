@@ -86,9 +86,6 @@ export const StudentCollegeResults: React.FC<Props> = ({ profile }) => {
           <p className="text-sm text-gray-600">
             <span className="font-semibold">Final Choice:</span> {profile.colleges.find(c => c.finalChoice)?.name || 'Not decided'}
           </p>
-          <p className="text-sm text-gray-600 mt-1">
-            <span className="font-semibold">Acceptance Rate:</span> {Math.round((profile.colleges.filter(c => c.status === 'Accepted').length / profile.colleges.length) * 100)}%
-          </p>
         </div>
       </div>
     </div>

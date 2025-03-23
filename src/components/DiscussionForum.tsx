@@ -9,9 +9,10 @@ import { MessageCircle, Filter } from 'lucide-react';
 
 interface Props {
   profileId: string;
+  refreshTrigger?: number; // Optional prop to trigger refreshes
 }
 
-export const DiscussionForum: React.FC<Props> = ({ profileId }) => {
+export const DiscussionForum: React.FC<Props> = ({ profileId, refreshTrigger = 0 }) => {
   const [messages, setMessages] = useState<ForumMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<MessageFilter>({
@@ -65,7 +66,7 @@ export const DiscussionForum: React.FC<Props> = ({ profileId }) => {
       console.error('Error setting up messages listener:', error);
       setLoading(false);
     }
-  }, [profileId, filter.sortBy]);
+  }, [profileId, filter.sortBy, refreshTrigger]); // Add refreshTrigger dependency to re-fetch when it changes
 
   // Filter messages based on current filter settings
   const filteredMessages = messages.filter(message => {
@@ -140,6 +141,8 @@ export const DiscussionForum: React.FC<Props> = ({ profileId }) => {
         });
       }
     } catch (error) {
+      console.error('Error liking message:', error);
+      setError("Failed to like message. Check console for details.");
     }
   };
 
