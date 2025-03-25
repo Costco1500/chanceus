@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, getDocs, addDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, addDoc, updateDoc, doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { ForumMessage, MessageFilter } from '../types/discussion';
 import { MessageForm } from './MessageForm';
@@ -23,50 +23,80 @@ export const DiscussionForum: React.FC<Props> = ({ profileId, refreshTrigger = 0
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Calculate expiration date (24 hours from now)
+  const calculateExpirationDate = (): number => {
+    const now = Date.now();
+    const oneDayInMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    return now + oneDayInMs;
+  };
+
+  // Clean up expired messages
+  const cleanupExpiredMessages = async () => {
+    try {
+      const now = Date.now();
+      const messagesRef = collection(db, 'messages');
+      const q = query(messagesRef, where('expiresAt', '<=', now));
+      
+      const snapshot = await getDocs(q);
+      
+      // Delete expired messages
+      const deletePromises = snapshot.docs.map(document => 
+        deleteDoc(doc(db, 'messages', document.id))
+      );
+      
+      await Promise.all(deletePromises);
+      console.log(`Cleaned up ${snapshot.size} expired messages`);
+    } catch (error) {
+      console.error('Error cleaning up expired messages:', error);
+    }
+  };
+
   // Fetch messages from Firestore with real-time updates
   useEffect(() => {
     setLoading(true);
     setError(null);
     
-    try {
-      const messagesRef = collection(db, 'messages');
-      const q = query(
-        messagesRef,
-        where('profileId', '==', profileId),
-        orderBy('timestamp', filter.sortBy === 'oldest' ? 'asc' : 'desc')
-      );
+    // Cleanup expired messages when component mounts
+    cleanupExpiredMessages();
+    
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      where('profileId', '==', profileId),
+      where('expiresAt', '>', Date.now()), // Only get non-expired messages
+      orderBy('timestamp', 'desc') // Order by timestamp
+    );
+
+    // Use onSnapshot for real-time updates
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedMessages: ForumMessage[] = [];
       
-      // Use onSnapshot for real-time updates instead of one-time fetch
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const fetchedMessages: ForumMessage[] = [];
-        
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          fetchedMessages.push({
-            id: doc.id,
-            content: data.content,
-            timestamp: data.timestamp,
-            likes: data.likes || 0,
-            parentId: data.parentId || undefined,
-            profileId: data.profileId
-          });
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedMessages.push({
+          id: doc.id,
+          content: data.content,
+          timestamp: data.timestamp,
+          likes: data.likes || 0,
+          parentId: data.parentId || undefined,
+          profileId: data.profileId,
+          expiresAt: data.expiresAt
         });
-        
-        setMessages(fetchedMessages);
-        setLoading(false);
-      }, (err) => {
-        console.error("Error fetching messages:", err);
-        
-        setLoading(false);
       });
       
-      // Cleanup subscription on unmount
-      return () => unsubscribe();
-    } catch (error) {
-      console.error('Error setting up messages listener:', error);
+      setMessages(fetchedMessages);
       setLoading(false);
-    }
-  }, [profileId, filter.sortBy, refreshTrigger]); // Add refreshTrigger dependency to re-fetch when it changes
+    }, (err) => {
+      console.error("Error fetching messages:", err);
+      setError("Failed to fetch messages. Please try again later.");
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [profileId, refreshTrigger]); // Add refreshTrigger dependency to re-fetch when it changes
 
   // Filter messages based on current filter settings
   const filteredMessages = messages.filter(message => {
@@ -89,36 +119,33 @@ export const DiscussionForum: React.FC<Props> = ({ profileId, refreshTrigger = 0
   // Post a new message
   const handlePostMessage = async (content: string, parentId?: string) => {
     try {
-      // Show optimistic UI update
-      const tempId = `temp-${Date.now()}`;
-      const tempMessage: ForumMessage = {
-        id: tempId,
-        content,
-        profileId,
-        timestamp: Date.now(),
-        likes: 0,
-        parentId
-      };
+      const expiresAt = calculateExpirationDate();
       
-      // Optimistically add the message to the UI
-      setMessages(prev => [tempMessage, ...prev]);
-      
-      // Actually save to Firebase
+      // Save to Firestore
       await addDoc(collection(db, 'messages'), {
         content,
         profileId,
         timestamp: Date.now(),
         likes: 0,
         parentId: parentId || null,
+        expiresAt, // Add expiration date
       });
       
-      // Note: We don't need to manually update the messages here
-      // as the onSnapshot listener will automatically update them
+      // Optimistically update the UI
+      const newMessage: ForumMessage = {
+        id: `temp-${Date.now()}`, // Temporary ID for optimistic UI
+        content,
+        profileId,
+        timestamp: Date.now(),
+        likes: 0,
+        parentId,
+        expiresAt,
+      };
+      
+      setMessages(prev => [newMessage, ...prev]);
     } catch (error) {
       console.error('Error posting message:', error);
       setError("Failed to post message. Check console for details.");
-      // Remove the optimistic message on error
-      setMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
     }
   };
 
@@ -152,6 +179,7 @@ export const DiscussionForum: React.FC<Props> = ({ profileId, refreshTrigger = 0
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <MessageCircle className="w-6 h-6" />
           Discussion Forum
+          <span className="text-xs text-gray-500 font-normal ml-2">(Messages expire after 24 hours)</span>
         </h2>
         <button
           onClick={() => setShowFilters(!showFilters)}

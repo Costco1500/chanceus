@@ -3,6 +3,31 @@ import { studentProfiles } from '../data/profiles';
 
 const GAME_STATE_KEY = 'collegeAdmissionsGame';
 
+// src/utils/gameLogic.ts
+
+const allColleges = [
+  'MIT', 'Stanford', 'Harvard', 'CalTech', 'UC Berkeley',
+  'Princeton', 'Yale', 'Columbia', 'UPenn', 'Cornell',
+  'UCLA', 'NYU', 'University of Michigan', 'University of Chicago',
+  'University of Southern California', 'University of Florida'
+];
+
+export const generateDailyGuesses = (profile: StudentProfile): string[] => {
+  const acceptedColleges = profile.colleges
+    .filter(college => college.status === 'Accepted')
+    .map(college => college.name);
+
+  // Randomly select additional colleges to fill the guesses
+  const additionalColleges = allColleges.filter(college => !acceptedColleges.includes(college));
+  const randomColleges = additionalColleges.sort(() => 0.5 - Math.random()).slice(0, 3); // Select 3 random colleges
+
+  // Combine accepted colleges with random selections
+  const dailyGuesses = [...acceptedColleges, ...randomColleges];
+
+  // Shuffle the guesses to randomize their order
+  return dailyGuesses.sort(() => 0.5 - Math.random());
+};
+
 export const getTodayProfile = (): StudentProfile => {
   const today = new Date().toISOString().split('T')[0];
   return studentProfiles.find(profile => profile.id === today) || studentProfiles[0];

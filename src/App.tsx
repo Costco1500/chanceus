@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import React, { useState, useEffect } from 'react';
 import { StudentProfile as StudentProfileComponent } from './components/StudentProfile';
 import { CollegeSelector } from './components/CollegeSelector';
@@ -6,7 +8,7 @@ import { Stats } from './components/Stats';
 import { ProfileSubmission } from './components/ProfileSubmission';
 import { DiscussionForum } from './components/DiscussionForum';
 import { StudentCollegeResults } from './components/StudentCollegeResults';
-import { getTodayProfile, getGameState, saveGameState, checkGuesses, generateShareText } from './utils/gameLogic';
+import { getTodayProfile, getGameState, saveGameState, checkGuesses, generateShareText, generateDailyGuesses } from './utils/gameLogic';
 import { GraduationCap, UserPlus, MessageCircle, RefreshCw } from 'lucide-react';
 import { Analytics } from "@vercel/analytics/react";
 import { db } from './firebase/config'; // Import to ensure Firebase is initialized early
@@ -28,6 +30,9 @@ function App() {
     'Princeton', 'Yale', 'Columbia', 'UPenn', 'Cornell'
   ];
 
+  // State to track the current date
+  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [guesses, setGuesses] = useState<string[]>(generateDailyGuesses(profile));
 
   // When game is completed, trigger the animation
   useEffect(() => {
@@ -35,6 +40,20 @@ function App() {
       setAnimateResults(true);
     }
   }, [gameState.completed]);
+
+  // Check for date change and reset game if necessary
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (today !== currentDate) {
+      setCurrentDate(today);
+      resetGame(); // Call resetGame when the date changes
+    }
+  }, [currentDate]);
+
+  const resetGame = () => {
+    const newProfile = getTodayProfile(); // Get the profile for the current date
+    setGuesses(generateDailyGuesses(newProfile)); // Regenerate guesses for the new day
+  };
 
   const handleCollegeSelect = (college: string) => {
     if (selectedColleges.includes(college)) {

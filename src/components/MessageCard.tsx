@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ForumMessage } from '../types/discussion';
 import { MessageForm } from './MessageForm';
-import { ThumbsUp, Reply, User } from 'lucide-react';
+import { ThumbsUp, Reply, User, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Props {
@@ -18,6 +18,38 @@ export const MessageCard: React.FC<Props> = ({
   onLike 
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+
+  // Calculate and update time remaining
+  useEffect(() => {
+    const updateTimeRemaining = () => {
+      const now = Date.now();
+      const timeLeft = message.expiresAt - now;
+      
+      if (timeLeft <= 0) {
+        setTimeRemaining('Expired');
+        return;
+      }
+      
+      // Convert to hours and minutes
+      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        setTimeRemaining(`${hours}h ${minutes}m left`);
+      } else {
+        setTimeRemaining(`${minutes}m left`);
+      }
+    };
+    
+    // Update immediately
+    updateTimeRemaining();
+    
+    // Update every minute
+    const interval = setInterval(updateTimeRemaining, 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [message.expiresAt]);
 
   const handleSubmitReply = (content: string) => {
     onReply(content, message.id);
@@ -34,6 +66,10 @@ export const MessageCard: React.FC<Props> = ({
         </div>
         <span className="text-sm font-medium">Anonymous</span>
         <span className="text-xs text-gray-500">{formattedDate}</span>
+        <div className="ml-auto flex items-center text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+          <Clock className="w-3 h-3 mr-1" />
+          {timeRemaining}
+        </div>
       </div>
       
       <p className="text-gray-700 mb-3">{message.content}</p>
